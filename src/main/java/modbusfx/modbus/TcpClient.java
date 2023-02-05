@@ -1,12 +1,5 @@
 package modbusfx.modbus;
 
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
 import jmodbus.Modbus;
 import jmodbus.ModbusClient;
 
@@ -16,46 +9,43 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class TcpClient implements Client {
 
-    private final StringProperty mIp;
-    private final IntegerProperty mPort;
-    private final IntegerProperty mSlaveId;
-    private final BooleanProperty mIsOpen;
-    private final BooleanProperty mIsConnected;
+    private TcpConnectionProps mConnectionProps;
+    private boolean mPropsModified;
+    private final ClientState mClientState;
+    private boolean mDisable;
 
     private final ByteBuffer mBuffer;
     private final Lock mLock;
     private ModbusClient mClient;
 
     public TcpClient() {
-        mIp = new SimpleStringProperty(null);
-        mPort = new SimpleIntegerProperty(-1);
-        mSlaveId = new SimpleIntegerProperty(-1);
-        mIsOpen = new SimpleBooleanProperty(false);
-        mIsConnected = new SimpleBooleanProperty(false);
+        mConnectionProps = new TcpConnectionProps();
+        mPropsModified = false;
+        mClientState = new ClientState();
+        mDisable = false;
 
         mBuffer = ByteBuffer.allocateDirect(64);
         mLock = new ReentrantLock();
         mClient = null;
     }
 
-    public StringProperty ipAddressProperty() {
-        return mIp;
+    public void setConnectionProps(TcpConnectionProps props) {
+        mLock.lock();
+        try {
+            mConnectionProps = props;
+            mPropsModified = true;
+        } finally {
+            mLock.unlock();
+        }
     }
 
-    public IntegerProperty portProperty() {
-        return mPort;
-    }
-
-    public IntegerProperty slaveProperty() {
-        return mSlaveId;
-    }
-
-    public ReadOnlyBooleanProperty isOpenProperty() {
-        return mIsOpen;
-    }
-
-    public ReadOnlyBooleanProperty isConnectedProperty() {
-        return mIsConnected;
+    public ClientState getState() {
+        mLock.lock();
+        try {
+            return new ClientState(mClientState);
+        } finally {
+            mLock.unlock();
+        }
     }
 
     @Override
@@ -66,18 +56,22 @@ public class TcpClient implements Client {
 
             switch (function) {
                 case READ_DISCRETE_INPUTS: {
+                    mBuffer.rewind();
                     mClient.readDiscreteInputs(op.getAddress(), op.getCount(), mBuffer);
                     return new Result(mBuffer, op.getCount(), 1);
                 }
                 case READ_COILS: {
+                    mBuffer.rewind();
                     mClient.readCoils(op.getAddress(), op.getCount(), mBuffer);
                     return new Result(mBuffer, op.getCount(), 1);
                 }
                 case READ_INPUT_REGISTERS: {
+                    mBuffer.rewind();
                     mClient.readInputRegisters(op.getAddress(), op.getCount(), mBuffer);
                     return new Result(mBuffer, op.getCount(), 2);
                 }
                 case READ_HOLDING_REGISTERS: {
+                    mBuffer.rewind();
                     mClient.readHoldingRegisters(op.getAddress(), op.getCount(), mBuffer);
                     return new Result(mBuffer, op.getCount(), 2);
                 }
@@ -97,6 +91,7 @@ public class TcpClient implements Client {
 
             switch (function) {
                 case WRITE_COILS:  {
+                    mBuffer.rewind();
                     mBuffer.put(op.getData());
                     mBuffer.position(0);
 
@@ -104,6 +99,7 @@ public class TcpClient implements Client {
                     break;
                 }
                 case WRITE_HOLDING_REGISTERS: {
+                    mBuffer.rewind();
                     mBuffer.put(op.getData());
                     mBuffer.position(0);
 
@@ -120,19 +116,38 @@ public class TcpClient implements Client {
 
     @Override
     public void close() {
-        closeClient();
+        mLock.lock();
+        try {
+            closeClient();
+            mDisable = true;
+        } finally {
+            mLock.unlock();
+        }
     }
 
     private void connectClient() {
         mLock.lock();
         try {
-            if (mClient == null) {
-                createClient();
+            if (mDisable) {
+                return;
             }
 
-            if (!mIsConnected.get()) {
+            if (mPropsModified) {
+                closeClient();
+                mPropsModified = false;
+            }
+
+            if (mClient == null) {
+                createClient();
+
+                if (mClient == null) {
+                    return;
+                }
+            }
+
+            if (!mClientState.isConnected()) {
                 mClient.connect();
-                mIsConnected.set(true);
+                mClientState.setConnected(true);
             }
         } finally {
             mLock.unlock();
@@ -144,30 +159,23 @@ public class TcpClient implements Client {
         try {
             closeClient();
 
-            String ip = ipAddressProperty().get();
-            if (ip == null) {
+            if (mDisable) {
                 return;
             }
 
-            int port = portProperty().get();
-            if (port <= 0) {
+            if (!mConnectionProps.isValid()) {
                 return;
             }
 
-            int slave = slaveProperty().get();
-            if (slave <= 0) {
-                return;
-            }
-
-            mClient = Modbus.newTcpClient(ip, port);
+            mClient = Modbus.newTcpClient(mConnectionProps.getIp(), mConnectionProps.getPort());
             try {
-                mClient.setSlave(slave);
+                mClient.setSlave(mConnectionProps.getSlaveId());
             } catch (Error | RuntimeException e) {
                 closeClient();
                 throw e;
             }
 
-            mIsOpen.set(true);
+            mClientState.setOpen(true);
         } finally {
             mLock.unlock();
         }
@@ -180,8 +188,8 @@ public class TcpClient implements Client {
                 mClient.close();
                 mClient = null;
 
-                mIsOpen.set(false);
-                mIsConnected.set(false);
+                mClientState.setOpen(false);
+                mClientState.setConnected(false);
             }
         } finally {
             mLock.unlock();

@@ -14,22 +14,24 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class ModbusFx {
 
     private static final boolean FORCE_FULL_SCREEN = false;
 
-    private static final double WINDOW_WIDTH = 1800;
-    private static final double WINDOW_HEIGHT = 800;
+    private static final double WINDOW_WIDTH = 800;
+    private static final double WINDOW_HEIGHT = 500;
 
     private final ProgramOptions mProgramOptions;
-    private final ExecutorService mExecutorService;
+    private final ScheduledExecutorService mExecutorService;
     private final Logger mLogger;
 
     private final AtomicReference<MainWindow> mMainWindow;
 
-    public ModbusFx(ProgramOptions programOptions, ExecutorService executorService, Logger logger) {
+    public ModbusFx(ProgramOptions programOptions, ScheduledExecutorService executorService, Logger logger) {
         mProgramOptions = programOptions;
         mExecutorService = executorService;
         mLogger = logger;
@@ -75,7 +77,15 @@ public class ModbusFx {
                     primaryStage.close();
                     Closeables.silentClose(mainWindow);
                     runLatch.countDown();
+                    return;
                 }
+
+                mExecutorService.scheduleAtFixedRate(
+                        mainWindow::updateClients,
+                        100,
+                        1000,
+                        TimeUnit.MILLISECONDS
+                );
             });
 
             runLatch.await();

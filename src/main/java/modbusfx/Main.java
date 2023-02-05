@@ -9,10 +9,8 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.slf4j.Logger;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 public class Main {
 
@@ -23,7 +21,7 @@ public class Main {
 
         ProgramOptions programOptions = handleArguments(args);
 
-        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        ScheduledExecutorService executorService = Executors.newScheduledThreadPool(2);
 
         Closer closer = Closer.empty();
         closer.add(executorService::shutdownNow);
