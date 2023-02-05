@@ -3,37 +3,26 @@ package modbusfx.gui.views;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.Dialog;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.stage.Modality;
-import modbusfx.modbus.TcpClient;
-import modbusfx.modbus.TcpConnectionProps;
+import modbusfx.modbus.Client;
 
 import java.io.Closeable;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Optional;
 
 public class ClientView extends BorderPane implements Closeable {
 
-    private final TcpClient mClient;
-    private TcpConnectionProps mProps;
-    private final TcpClientConfigView mConfigView;
+    private final Client mClient;
+    private final ClientControl mClientControl;
     private final FlowPane mReadViewsPane;
     private final List<ReadOperationView> mReadOperations;
 
-    public ClientView() {
-        mClient = new TcpClient();
-        mProps = new TcpConnectionProps();
-
-        mConfigView = new TcpClientConfigView();
-        mConfigView.setReadOnly(true);
-        mConfigView.setProps(mProps);
+    public ClientView(Client client, ClientControl clientControl) {
+        mClient = client;
+        mClientControl = clientControl;
 
         mReadViewsPane = new FlowPane();
         mReadOperations = new LinkedList<>();
@@ -46,44 +35,22 @@ public class ClientView extends BorderPane implements Closeable {
 
         HBox buttonsPane = new HBox();
         buttonsPane.setSpacing(5);
-        buttonsPane.setAlignment(Pos.CENTER);
+        buttonsPane.setAlignment(Pos.BOTTOM_LEFT);
         buttonsPane.setPadding(new Insets(2));
         buttonsPane.getChildren().addAll(editClientConfig, addNewReadOps);
 
         VBox controlPanel = new VBox();
         controlPanel.setSpacing(5);
-        controlPanel.setAlignment(Pos.CENTER);
+        controlPanel.setAlignment(Pos.BOTTOM_LEFT);
         controlPanel.setPadding(new Insets(2));
-        controlPanel.getChildren().addAll(mConfigView, buttonsPane);
+        controlPanel.getChildren().addAll(mClientControl, buttonsPane);
 
         setLeft(controlPanel);
         setCenter(mReadViewsPane);
     }
 
-    public boolean openEditConfigDialog() {
-        TcpClientConfigView configView = new TcpClientConfigView();
-
-        Dialog<Boolean> dialog = new Dialog<>();
-        dialog.initModality(Modality.WINDOW_MODAL);
-        dialog.getDialogPane().setContent(configView);
-        dialog.setResultConverter((dialogButton)-> {
-            ButtonBar.ButtonData data = dialogButton == null ? null : dialogButton.getButtonData();
-            return data == ButtonBar.ButtonData.APPLY;
-        });
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.APPLY, ButtonType.CANCEL);
-
-        configView.setProps(mProps);
-
-        Optional<Boolean> optional = dialog.showAndWait();
-        if (optional.isEmpty() || !optional.get()) {
-            return false;
-        }
-
-        mProps = configView.getProps();
-        mClient.setConnectionProps(mProps);
-        mConfigView.setProps(mProps);
-
-        return true;
+    public void openEditConfigDialog() {
+        mClientControl.openEditConfigDialog();
     }
 
     public void update() {

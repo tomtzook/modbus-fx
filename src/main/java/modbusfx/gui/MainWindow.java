@@ -4,6 +4,7 @@ import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+import modbusfx.gui.views.ClientType;
 import modbusfx.gui.views.ClientView;
 
 public class MainWindow implements AutoCloseable {
@@ -21,7 +22,7 @@ public class MainWindow implements AutoCloseable {
         mHeight = height;
         mRoot = new BorderPane();
 
-        mClientView = new ClientView();
+        mClientView = ClientType.TCP.createView();
     }
 
     public Scene createScene() {

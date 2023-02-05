@@ -6,7 +6,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import modbusfx.gui.controls.NumericField;
-import modbusfx.modbus.TcpClient;
 import modbusfx.modbus.TcpConnectionProps;
 
 public class TcpClientConfigView extends GridPane {

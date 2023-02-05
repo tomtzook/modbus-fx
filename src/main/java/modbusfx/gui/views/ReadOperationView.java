@@ -1,21 +1,15 @@
 package modbusfx.gui.views;
 
-import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.ChoiceDialog;
-import javafx.scene.control.Dialog;
-import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
-import javafx.stage.Modality;
+import modbusfx.gui.Dialogs;
 import modbusfx.modbus.Client;
 import modbusfx.modbus.Result;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
-import java.util.Optional;
 
 public class ReadOperationView extends BorderPane {
 
@@ -30,14 +24,17 @@ public class ReadOperationView extends BorderPane {
 
         mConfigView = new ReadOperationConfigView();
         mConfigView.setReadOnly(true);
+        mConfigView.setPrefWidth(100);
 
         mResultText = new TextArea();
         mResultText.setEditable(false);
         mResultText.setWrapText(true);
+        mResultText.setMaxSize(100, 20);
 
         mErrorText = new TextArea();
         mErrorText.setEditable(false);
         mErrorText.setWrapText(true);
+        mErrorText.setMaxSize(100, 20);
 
         VBox resultsView = new VBox();
         resultsView.setSpacing(5);
@@ -49,27 +46,15 @@ public class ReadOperationView extends BorderPane {
 
     public boolean openEditConfigDialog() {
         ReadOperationConfigView configView = new ReadOperationConfigView();
-
-        Dialog<Boolean> dialog = new Dialog<>();
-        dialog.initModality(Modality.WINDOW_MODAL);
-        dialog.getDialogPane().setContent(configView);
-        dialog.setResultConverter((dialogButton)-> {
-            ButtonBar.ButtonData data = dialogButton == null ? null : dialogButton.getButtonData();
-            return data == ButtonBar.ButtonData.APPLY;
-        });
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.APPLY, ButtonType.CANCEL);
-
         configView.loadFrom(mOperation);
 
-        Optional<Boolean> optional = dialog.showAndWait();
-        if (optional.isEmpty() || !optional.get()) {
-            return false;
+        if (Dialogs.showCustomApplyDialog(configView)) {
+            configView.saveInto(mOperation);
+            mConfigView.loadFrom(mOperation);
+            return true;
         }
 
-        configView.saveInto(mOperation);
-        mConfigView.loadFrom(mOperation);
-
-        return true;
+        return false;
     }
 
     public void execute(Client client) {
