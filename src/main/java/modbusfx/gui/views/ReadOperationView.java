@@ -6,35 +6,34 @@ import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import modbusfx.gui.Dialogs;
-import modbusfx.modbus.Client;
+import modbusfx.modbus.ReadFunction;
+import modbusfx.modbus.ReadOp;
 import modbusfx.modbus.Result;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.Arrays;
 
 public class ReadOperationView extends BorderPane {
 
     private ReadOperation mOperation;
 
-    private final TextArea mResultText;
+    private final ReadOpResultView mResultView;
     private final TextArea mErrorText;
 
     public ReadOperationView() {
-        mResultText = new TextArea();
-        mResultText.setEditable(false);
-        mResultText.setWrapText(true);
-        mResultText.setMaxSize(300, 200);
+        mResultView = new ReadOpResultView();
+        mResultView.setMaxSize(400, 300);
 
         mErrorText = new TextArea();
         mErrorText.setEditable(false);
         mErrorText.setWrapText(true);
-        mErrorText.setMaxSize(400, 100);
+        mErrorText.setMaxSize(400, 150);
 
         VBox resultsView = new VBox();
         resultsView.setSpacing(5);
+        resultsView.setPadding(new Insets(2));
         resultsView.setAlignment(Pos.CENTER);
-        resultsView.getChildren().addAll(mResultText);
+        resultsView.getChildren().addAll(mResultView);
 
         VBox errorView = new VBox();
         errorView.setSpacing(5);
@@ -49,7 +48,7 @@ public class ReadOperationView extends BorderPane {
     public void setOperation(ReadOperation operation) {
         mOperation = operation;
 
-        mResultText.setText("");
+        mResultView.clear();
         mErrorText.setText("");
     }
 
@@ -70,8 +69,8 @@ public class ReadOperationView extends BorderPane {
         return false;
     }
 
-    public void loadResult(Result result) {
-        mResultText.setText(Arrays.toString(result.getResult()));
+    public void loadResult(ReadFunction function, ReadOp op, Result result) {
+        mResultView.loadResult(function, op, result);
     }
 
     public void loadError(Throwable throwable) {

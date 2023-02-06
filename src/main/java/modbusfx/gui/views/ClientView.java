@@ -13,6 +13,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import modbusfx.modbus.Client;
 import modbusfx.modbus.ReadFunction;
+import modbusfx.modbus.ReadOp;
 import modbusfx.modbus.Result;
 
 import java.io.Closeable;
@@ -92,7 +93,10 @@ public class ClientView extends BorderPane implements Closeable {
         if (operation != null) {
             try {
                 Result result = operation.executeOnClient(mClient);
-                mDisplayedReadViewPane.loadResult(result);
+                mDisplayedReadViewPane.loadResult(
+                        operation.functionProperty().getValue(),
+                        new ReadOp(operation.addressProperty().getValue(), operation.countProperty().getValue()),
+                        result);
             } catch (Throwable t) {
                 mDisplayedReadViewPane.loadError(t);
             }

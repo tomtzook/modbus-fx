@@ -22,7 +22,7 @@ public class ModbusFx {
     private static final boolean FORCE_FULL_SCREEN = false;
 
     private static final double WINDOW_WIDTH = 800;
-    private static final double WINDOW_HEIGHT = 500;
+    private static final double WINDOW_HEIGHT = 550;
 
     private final ProgramOptions mProgramOptions;
     private final ScheduledExecutorService mExecutorService;
