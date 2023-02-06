@@ -1,6 +1,5 @@
 package modbusfx.gui.views;
 
-import javafx.beans.property.StringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.TextArea;
@@ -16,19 +15,12 @@ import java.util.Arrays;
 
 public class ReadOperationView extends BorderPane {
 
-    private final ReadOperation mOperation;
-    private final ReadOperationConfigView mConfigView;
+    private ReadOperation mOperation;
 
     private final TextArea mResultText;
     private final TextArea mErrorText;
 
     public ReadOperationView() {
-        mOperation = new ReadOperation();
-
-        mConfigView = new ReadOperationConfigView();
-        mConfigView.setReadOnly(true);
-        mConfigView.setPrefWidth(250);
-
         mResultText = new TextArea();
         mResultText.setEditable(false);
         mResultText.setWrapText(true);
@@ -38,12 +30,6 @@ public class ReadOperationView extends BorderPane {
         mErrorText.setEditable(false);
         mErrorText.setWrapText(true);
         mErrorText.setMaxSize(400, 100);
-
-        VBox configView = new VBox();
-        configView.setSpacing(5);
-        configView.setPadding(new Insets(2));
-        configView.setAlignment(Pos.CENTER_LEFT);
-        configView.getChildren().addAll(mConfigView);
 
         VBox resultsView = new VBox();
         resultsView.setSpacing(5);
@@ -56,13 +42,15 @@ public class ReadOperationView extends BorderPane {
         errorView.setAlignment(Pos.BOTTOM_CENTER);
         errorView.getChildren().addAll(mErrorText);
 
-        setTop(configView);
         setCenter(resultsView);
         setBottom(errorView);
     }
 
-    public String getName() {
-        return mOperation.nameProperty().getValue();
+    public void setOperation(ReadOperation operation) {
+        mOperation = operation;
+
+        mResultText.setText("");
+        mErrorText.setText("");
     }
 
     public boolean openEditConfigDialog() {
@@ -76,27 +64,17 @@ public class ReadOperationView extends BorderPane {
             }
 
             configView.saveInto(mOperation);
-            mConfigView.loadFrom(mOperation);
             return true;
         }
 
         return false;
     }
 
-    public void execute(Client client) {
-        try {
-            Result result = mOperation.executeOnClient(client);
-            loadResult(result);
-        } catch (Throwable t) {
-            loadError(t);
-        }
-    }
-
-    private void loadResult(Result result) {
+    public void loadResult(Result result) {
         mResultText.setText(Arrays.toString(result.getResult()));
     }
 
-    private void loadError(Throwable throwable) {
+    public void loadError(Throwable throwable) {
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
         throwable.printStackTrace(pw);
