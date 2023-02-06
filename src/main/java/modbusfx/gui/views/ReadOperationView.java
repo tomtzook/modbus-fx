@@ -1,5 +1,8 @@
 package modbusfx.gui.views;
 
+import javafx.beans.property.StringProperty;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
@@ -24,24 +27,42 @@ public class ReadOperationView extends BorderPane {
 
         mConfigView = new ReadOperationConfigView();
         mConfigView.setReadOnly(true);
-        mConfigView.setPrefWidth(100);
+        mConfigView.setPrefWidth(250);
 
         mResultText = new TextArea();
         mResultText.setEditable(false);
         mResultText.setWrapText(true);
-        mResultText.setMaxSize(100, 20);
+        mResultText.setMaxSize(300, 200);
 
         mErrorText = new TextArea();
         mErrorText.setEditable(false);
         mErrorText.setWrapText(true);
-        mErrorText.setMaxSize(100, 20);
+        mErrorText.setMaxSize(400, 100);
+
+        VBox configView = new VBox();
+        configView.setSpacing(5);
+        configView.setPadding(new Insets(2));
+        configView.setAlignment(Pos.CENTER_LEFT);
+        configView.getChildren().addAll(mConfigView);
 
         VBox resultsView = new VBox();
         resultsView.setSpacing(5);
-        resultsView.getChildren().addAll(mResultText, mErrorText);
+        resultsView.setAlignment(Pos.CENTER);
+        resultsView.getChildren().addAll(mResultText);
 
-        setLeft(mConfigView);
+        VBox errorView = new VBox();
+        errorView.setSpacing(5);
+        errorView.setPadding(new Insets(2));
+        errorView.setAlignment(Pos.BOTTOM_CENTER);
+        errorView.getChildren().addAll(mErrorText);
+
+        setTop(configView);
         setCenter(resultsView);
+        setBottom(errorView);
+    }
+
+    public String getName() {
+        return mOperation.nameProperty().getValue();
     }
 
     public boolean openEditConfigDialog() {
@@ -49,6 +70,11 @@ public class ReadOperationView extends BorderPane {
         configView.loadFrom(mOperation);
 
         if (Dialogs.showCustomApplyDialog(configView)) {
+            if (!configView.areValuesValid()) {
+                Dialogs.showInfo("Error", "Bad values entered");
+                return false;
+            }
+
             configView.saveInto(mOperation);
             mConfigView.loadFrom(mOperation);
             return true;

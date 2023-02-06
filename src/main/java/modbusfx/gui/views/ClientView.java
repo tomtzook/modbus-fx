@@ -3,29 +3,59 @@ package modbusfx.gui.views;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import modbusfx.modbus.Client;
 
 import java.io.Closeable;
-import java.util.LinkedList;
-import java.util.List;
+import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class ClientView extends BorderPane implements Closeable {
 
     private final Client mClient;
     private final ClientControl mClientControl;
-    private final FlowPane mReadViewsPane;
-    private final List<ReadOperationView> mReadOperations;
+    private final StackPane mDisplayedReadViewPane;
+    private final ListView<ReadOperationView> mReadOperationsList;
+    private final AtomicReference<ReadOperationView> mSelectedReadOp;
 
     public ClientView(Client client, ClientControl clientControl) {
         mClient = client;
         mClientControl = clientControl;
 
-        mReadViewsPane = new FlowPane();
-        mReadOperations = new LinkedList<>();
+        mDisplayedReadViewPane = new StackPane();
+        mSelectedReadOp = new AtomicReference<>();
+        mReadOperationsList = new ListView<>();
+        mReadOperationsList.setCellFactory((param)-> {
+            return new ListCell<>() {
+                @Override
+                protected void updateItem(ReadOperationView item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty) {
+                        setText(null);
+                    } else {
+                        setText(item.getName());
+                    }
+                }
+            };
+        });
+        mReadOperationsList.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        mReadOperationsList.getSelectionModel().selectedItemProperty().addListener((obs, o, n)-> {
+            mDisplayedReadViewPane.getChildren().clear();
+
+            if (n == null) {
+                mSelectedReadOp.set(null);
+            } else {
+                mSelectedReadOp.set(n);
+                mDisplayedReadViewPane.getChildren().add(n);
+            }
+        });
 
         Button editClientConfig = new Button("Edit Client Config");
         editClientConfig.setOnAction((e)-> openEditConfigDialog());
@@ -41,12 +71,12 @@ public class ClientView extends BorderPane implements Closeable {
 
         VBox controlPanel = new VBox();
         controlPanel.setSpacing(5);
-        controlPanel.setAlignment(Pos.BOTTOM_LEFT);
+        controlPanel.setAlignment(Pos.CENTER_LEFT);
         controlPanel.setPadding(new Insets(2));
-        controlPanel.getChildren().addAll(mClientControl, buttonsPane);
+        controlPanel.getChildren().addAll(mClientControl, mReadOperationsList, buttonsPane);
 
         setLeft(controlPanel);
-        setCenter(mReadViewsPane);
+        setCenter(mDisplayedReadViewPane);
     }
 
     public void openEditConfigDialog() {
@@ -54,7 +84,8 @@ public class ClientView extends BorderPane implements Closeable {
     }
 
     public void update() {
-        for (ReadOperationView view : mReadOperations) {
+        ReadOperationView view = mSelectedReadOp.get();
+        if (view != null) {
             view.execute(mClient);
         }
     }
@@ -62,8 +93,7 @@ public class ClientView extends BorderPane implements Closeable {
     private void addNewReadOp() {
         ReadOperationView view = new ReadOperationView();
         if (view.openEditConfigDialog()) {
-            mReadOperations.add(view);
-            mReadViewsPane.getChildren().add(view);
+            mReadOperationsList.getItems().add(view);
         }
     }
 
